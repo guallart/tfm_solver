@@ -1,0 +1,45 @@
+#!/bin/bash
+###########################################
+## Configuracion del trabajo ##
+###########################################
+
+## COMANDOS OBLIGATORIOS
+## Nombre del trabajo
+#SBATCH -J weibull_local
+## Nombre del log de salida (%x coge el nombre del trabajo indicado anteriormente)
+#SBATCH -o %x.log
+## Nombre del log de error (%x coge el nombre del trabajo indicado anteriormente)
+#SBATCH -e %x.err
+## Número de hilos reservados para el trabajo
+#SBATCH --ntasks=12
+## Memoria reservada por procesador
+#SBATCH --mem-per-cpu=150
+## Espacio necesario para almacenar los ficheros temporales (indicado en GB y entre " ")
+DiskSpace="50"
+
+## COMANDOS OPCIONALES
+## Especifica a qué cola se mandará el trabajo
+## Si se omite se mandará a cualquier cola libre en la que el usuario tenga permiso
+#SBATCH --partition ALPHA
+## Especifica el nodo al que se manda el trabajo
+## Si se omite se mandará al nodo más descargado accesible al usuario
+##SBATCH --nodelist=compute-0-0
+
+###############################
+## Comandos a ejecutar ##
+###############################
+## NO MODIFICAR esta linea (permite asignar el directorio de scratch)
+source /share/bin/jobs/scratch.sh $DiskSpace
+## CARGAR LOS MÓDULOS NECESARIOS (OPCIONAL)
+## module unload MODULO_NO_DESEADO
+## module load MODULO_DESEADO
+## COPIAR FICHEROS AL DIRECTORIO TEMPORAL Y TRASLADARSE A ÉL
+cp -r $SLURM_SUBMIT_DIR/* $TMPDIR
+cd $TMPDIR
+
+## ----------- EJECUCIÓN DEL PROGRAMA ----------
+OUTDIR=/home/jguallart1/TFM/weibull_local_outputs/
+mkdir -p $OUTDIR
+
+./solver 3
+cp isosurfaces*.out *.x *.r $OUTDIR

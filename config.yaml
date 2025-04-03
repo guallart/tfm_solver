@@ -1,0 +1,8 @@
+L: 20
+precision: f64
+n_threads: 12
+n_tries: 2000
+distribution: weibull
+job_name: weibull_local
+params:
+  - 3
