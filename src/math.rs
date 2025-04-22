@@ -1,7 +1,7 @@
 use f256::f256;
 use std::f64::consts::PI;
 
-use crate::types::Float;
+use crate::float::Float;
 
 const EXP_ITERS: u64 = 50;
 
@@ -57,6 +57,10 @@ pub fn gammaf64(z: f64) -> f64 {
     }
 }
 
+pub fn gammaf32(z: f32) -> f32 {
+    gammaf64(z.into()) as f32
+}
+
 pub fn gammaf256(z: f256) -> f256 {
     let pi256: f256 = f256::from(PI);
     let half: f256 = f256::from(0.5);
@@ -87,13 +91,22 @@ pub fn gammaf256(z: f256) -> f256 {
 }
 
 #[allow(unused)]
-pub fn linspace(start: f64, end: f64, num: usize) -> Vec<f64> {
+pub fn linspace<T>(start: T, end: T, num: usize) -> Vec<T>
+where
+    T: Float,
+{
+    let start: f64 = start.into_f64();
+    let end: f64 = end.into_f64();
+
     if num < 2 {
-        return vec![start];
+        return vec![T::new(start)];
     }
 
     let step = (end - start) / (num - 1) as f64;
-    (0..num).map(|i| start + i as f64 * step).collect()
+    (0..num)
+        .map(|i| end + i as f64 * step)
+        .map(|x| T::new(x))
+        .collect()
 }
 
 pub fn erff64(x: f64) -> f64 {
@@ -113,6 +126,10 @@ pub fn erff64(x: f64) -> f64 {
     let poly = t * (a1 + t * (a2 + t * (a3 + t * (a4 + a5 * t))));
 
     sign * (1.0 - poly * temp)
+}
+
+pub fn erff32(z: f32) -> f32 {
+    erff64(z.into()) as f32
 }
 
 pub fn erff256(x: f256) -> f256 {

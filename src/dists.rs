@@ -1,156 +1,11 @@
-use crate::math::{erff256, erff64, exp256, gammaf256, gammaf64, powf256};
-use core::f64;
-use f256::f256;
-use rand::{rngs::ThreadRng, Rng};
+use crate::float::Float;
+use rand::rngs::ThreadRng;
 use std::convert::Into;
-use std::fmt::{self, Display};
-use std::ops::{Add, Div, Mul, Neg, Sub};
-
-pub trait Float<T>:
-    Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Neg + Copy + Display
-{
-    const ONE: T;
-    const NEG_ONE: T;
-    const ZERO: T;
-    const TWO: T;
-    const PI: T;
-
-    fn new<F: Into<f64>>(x: F) -> T;
-    fn random(rng: &mut ThreadRng) -> T;
-    fn sqrt(self) -> T;
-    fn exp(self) -> T;
-    fn ln(self) -> T;
-    fn powf(self, exponent: T) -> T;
-    fn gamma(self) -> T;
-    fn abs(self) -> T;
-    fn erf(self) -> T;
-    #[allow(unused)]
-    fn intof64(self) -> f64;
-}
-
-impl Float<f64> for f64 {
-    const ONE: Self = 1.0f64;
-    const NEG_ONE: Self = -1.0f64;
-    const ZERO: Self = 0.0f64;
-    const TWO: Self = 2.0f64;
-    const PI: Self = f64::consts::PI;
-
-    fn new<T>(x: T) -> Self
-    where
-        T: Into<f64>,
-    {
-        x.into()
-    }
-
-    fn random(rng: &mut ThreadRng) -> Self {
-        rng.random::<f64>()
-    }
-
-    fn sqrt(self) -> f64 {
-        f64::sqrt(self)
-    }
-
-    fn exp(self) -> f64 {
-        f64::exp(self)
-    }
-
-    fn ln(self) -> f64 {
-        f64::ln(self)
-    }
-
-    fn powf(self, exponent: f64) -> f64 {
-        f64::powf(self, exponent)
-    }
-
-    fn gamma(self) -> f64 {
-        gammaf64(self)
-    }
-
-    fn abs(self) -> f64 {
-        f64::abs(self)
-    }
-
-    fn erf(self) -> f64 {
-        erff64(self)
-    }
-
-    fn intof64(self) -> f64 {
-        self
-    }
-}
-
-impl Float<f256> for f256 {
-    const ONE: Self = f256::ONE;
-    const NEG_ONE: Self = f256::NEG_ONE;
-    const ZERO: Self = f256::ZERO;
-    const TWO: Self = f256::TWO;
-    // not exactly pi to all decimals, only the first 64 bits, but good enough
-    const PI: Self = f256::from_bits((85070776964233020888359549780463976448, 0));
-
-    fn new<T>(x: T) -> Self
-    where
-        T: Into<f64>,
-    {
-        f256::from(x.into())
-    }
-
-    fn random(rng: &mut ThreadRng) -> Self {
-        f256::from(rng.random::<f64>())
-    }
-
-    fn sqrt(self) -> f256 {
-        f256::sqrt(self)
-    }
-
-    fn exp(self) -> f256 {
-        exp256(self)
-    }
-
-    fn ln(self) -> f256 {
-        f256::ln(&self)
-    }
-
-    fn powf(self, exponent: f256) -> f256 {
-        powf256(self, exponent)
-    }
-
-    fn gamma(self) -> f256 {
-        gammaf256(self)
-    }
-
-    fn abs(self) -> f256 {
-        f256::abs(&self)
-    }
-
-    fn erf(self) -> f256 {
-        erff256(self)
-    }
-
-    fn intof64(self) -> f64 {
-        self.to_string().parse::<f64>().unwrap()
-    }
-}
-
-#[allow(unused)]
-trait PrecisionStr {
-    fn precision_str() -> String;
-}
-
-impl PrecisionStr for f64 {
-    fn precision_str() -> String {
-        "f64".to_string()
-    }
-}
-
-impl PrecisionStr for f256 {
-    fn precision_str() -> String {
-        "f256".to_string()
-    }
-}
+use std::fmt;
 
 pub trait Distribution<T>: fmt::Display
 where
-    T: Float<T>,
+    T: Float,
 {
     fn new<F: Into<f64>>(param: F) -> Self;
     fn sample(&self, rng: &mut ThreadRng) -> T;
@@ -160,22 +15,22 @@ where
 }
 
 #[allow(unused)]
-pub struct ExpDistribution<T>
+pub struct InverseDist<T>
 where
-    T: Float<T>,
+    T: Float,
 {
     param: T,
 }
 
-impl<T: Float<T>> fmt::Display for ExpDistribution<T> {
+impl<T: Float> fmt::Display for InverseDist<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ExpDist(a={:.3})", self.param)
+        write!(f, "Inverse(a={:.3})", self.param)
     }
 }
 
-impl<T: Float<T>> Distribution<T> for ExpDistribution<T> {
-    fn new<F: Into<f64>>(param: F) -> ExpDistribution<T> {
-        ExpDistribution {
+impl<T: Float> Distribution<T> for InverseDist<T> {
+    fn new<F: Into<f64>>(param: F) -> InverseDist<T> {
+        InverseDist {
             param: T::new(param.into()),
         }
     }
@@ -193,18 +48,18 @@ impl<T: Float<T>> Distribution<T> for ExpDistribution<T> {
 #[allow(unused)]
 pub struct WeibullDist<T>
 where
-    T: Float<T>,
+    T: Float,
 {
     param: T,
 }
 
-impl<T: Float<T>> fmt::Display for WeibullDist<T> {
+impl<T: Float> fmt::Display for WeibullDist<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "WeibullDist(k={:.3})", self.param)
+        write!(f, "Weibull(k={:.3})", self.param)
     }
 }
 
-impl<T: Float<T>> Distribution<T> for WeibullDist<T> {
+impl<T: Float> Distribution<T> for WeibullDist<T> {
     fn new<F: Into<f64>>(param: F) -> WeibullDist<T> {
         WeibullDist {
             param: T::new(param.into()),
@@ -224,18 +79,18 @@ impl<T: Float<T>> Distribution<T> for WeibullDist<T> {
 #[allow(unused)]
 pub struct LogNormalDist<T>
 where
-    T: Float<T>,
+    T: Float,
 {
     param: T,
 }
 
-impl<T: Float<T>> fmt::Display for LogNormalDist<T> {
+impl<T: Float> fmt::Display for LogNormalDist<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "LogNormalDist(s={:.3})", self.param)
+        write!(f, "LogNormal(s={:.3})", self.param)
     }
 }
 
-impl<T: Float<T>> Distribution<T> for LogNormalDist<T> {
+impl<T: Float> Distribution<T> for LogNormalDist<T> {
     fn new<F: Into<f64>>(param: F) -> LogNormalDist<T> {
         LogNormalDist {
             param: T::new(param.into()),
@@ -257,10 +112,18 @@ impl<T: Float<T>> Distribution<T> for LogNormalDist<T> {
     }
 }
 
+pub enum ValidDists<T: Float> {
+    InverseDist(InverseDist<T>),
+    WeibullDist(WeibullDist<T>),
+    LogNormalDist(LogNormalDist<T>),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::float::{Float, PrecisionStr};
     use approx::assert_relative_eq;
+    use f256::f256;
     use plotters::prelude::*;
     use rand;
     use std::path::Path;
@@ -348,18 +211,18 @@ mod tests {
     fn test_dist<D, T>(mut rng: &mut ThreadRng, params: &Vec<f64>, n_tries: usize)
     where
         D: Distribution<T>,
-        T: Float<T> + PrecisionStr + 'static,
+        T: Float + PrecisionStr + 'static,
     {
         for p in params.into_iter() {
             let dist = D::new(*p);
             println!("Testing {}", dist);
             let data: Vec<f64> = (0..n_tries)
-                .map(|_| dist.sample(&mut rng).intof64())
+                .map(|_| dist.sample(&mut rng).into_f64())
                 .collect();
 
             let precision = T::precision_str();
             let file_name = format!("{}_{}.png", dist, precision);
-            let expected = dist.mean().intof64();
+            let expected = dist.mean().into_f64();
             let actual = data.iter().sum::<f64>() / n_tries as f64;
             histogram(&data, &file_name, expected, actual, &format!("{}", dist));
             assert_relative_eq!(actual / expected, 1.0, epsilon = EPS);
@@ -374,8 +237,8 @@ mod tests {
         empty_plots_directory();
 
         let params = vec![3.0, 5.0, 10.0];
-        test_dist::<ExpDistribution<f64>, f64>(&mut rng, &params, n_tries);
-        test_dist::<ExpDistribution<f256>, f256>(&mut rng, &params, n_tries);
+        test_dist::<InverseDist<f64>, f64>(&mut rng, &params, n_tries);
+        test_dist::<InverseDist<f256>, f256>(&mut rng, &params, n_tries);
 
         let params = vec![5.0, 3.0, 1.0];
         test_dist::<WeibullDist<f64>, f64>(&mut rng, &params, n_tries);

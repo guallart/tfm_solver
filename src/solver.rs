@@ -1,7 +1,8 @@
 use crate::config::{Precision, L, N_RES, N_THREADS, N_TRIES, N_UNK};
-use crate::io;
 #[allow(unused_imports)]
-use crate::types::{Distribution, Float};
+use crate::dists::Distribution;
+use crate::float::Float;
+use crate::io;
 use rand::rngs::ThreadRng;
 use std::cmp::min;
 use std::collections::VecDeque;
@@ -179,12 +180,12 @@ unsafe fn compute_error(x: &Vec<Precision>, norm: Norm) -> Precision {
     }
 }
 
-fn compute_isosurface(x: &Vec<Precision>) -> Vec<(usize, usize)> {
+fn compute_isosurface(x: &Vec<Precision>, value: Precision) -> Vec<(usize, usize)> {
     let mut surface: Vec<(usize, usize)> = Vec::with_capacity(L);
 
     for row in 0..L {
         for col in 0..L - 2 {
-            if x[fidx(row, col)] < ZERO {
+            if x[fidx(row, col)] < value {
                 continue;
             }
 
@@ -199,7 +200,7 @@ fn compute_isosurface(x: &Vec<Precision>) -> Vec<(usize, usize)> {
             .collect();
 
             'nloop: for neigh in neighs.iter() {
-                if x[fidx(neigh.0, neigh.1)] < ZERO {
+                if x[fidx(neigh.0, neigh.1)] < value {
                     surface.push(*neigh);
                     break 'nloop;
                 }
@@ -233,7 +234,7 @@ fn compute_eta_and_completion_time(
     (eta, estimated_end_str)
 }
 
-pub fn compute_n_tries<D, P>(dist: D, outdir: P, export_mode: ExportMode)
+pub fn compute_n_tries<D, P>(dist: D, outdir: P, export_mode: ExportMode, isosurface_value: f64)
 where
     D: Distribution<Precision>,
     P: AsRef<Path>,
@@ -243,13 +244,14 @@ where
     let mut rng = rand::rng();
     let outdir: &Path = outdir.as_ref();
     let mut times: VecDeque<Duration> = VecDeque::with_capacity(100);
+    let isosurface_value = Precision::new(isosurface_value);
 
     unsafe {
         for iter in 0..N_TRIES {
-            fill_resistances(&dist, &mut rng, &mut resist);
-            build_system(&mut resist);
+            let (duration_fill, _) = timeit!(fill_resistances(&dist, &mut rng, &mut resist));
+            let (duration_build, _) = timeit!(build_system(&mut resist));
+            let (duration_gauss, result) = timeit!(gauss_elimination(&mut x));
 
-            let (duration, result) = timeit!(gauss_elimination(&mut x));
             let msg = match result.clone() {
                 Ok(_) => "DONE".to_string(),
                 Err(e) => format!("FAIL - Gaussian elimination failed. {:?}", e),
@@ -261,6 +263,7 @@ where
             if times.len() >= 100 {
                 times.pop_front();
             }
+            let duration = duration_fill + duration_build + duration_gauss;
             times.push_back(duration);
 
             let (eta, completion_time) =
@@ -291,7 +294,7 @@ where
                         .expect("Failed at saving results");
                 }
                 ExportMode::ExportIsoSurface => {
-                    let surface = compute_isosurface(&x);
+                    let surface = compute_isosurface(&x, isosurface_value);
                     let surf_file = outdir.join(format!("isosurfaces_L{}_{}.out", L, dist));
                     io::export_surface(&surf_file, &surface).expect("Failed at saving results");
                 }
@@ -299,7 +302,7 @@ where
                     io::export_arrays(&dist, &outdir, &resist, &x, err2, errinf, iter)
                         .expect("Failed at saving results");
 
-                    let surface = compute_isosurface(&x);
+                    let surface = compute_isosurface(&x, isosurface_value);
                     let surf_file = outdir.join(format!("isosurfaces_L{}_{}.out", L, dist));
                     io::export_surface(&surf_file, &surface).expect("Failed at saving results");
                 }
@@ -311,12 +314,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Precision;
     use crate::math;
 
     #[test]
     fn test_compute_surface() {
-        let mut x: Vec<f64> = vec![0.0; N_UNK];
-        let values = math::linspace(V_LOW, V_HGH, L - 2);
+        let mut x: Vec<Precision> = vec![Precision::ZERO; N_UNK];
+        let values = math::linspace::<Precision>(V_LOW, V_HGH, L - 2);
+        let isosurface_value = Precision::ZERO;
 
         for (j, v) in values.iter().enumerate() {
             for i in 0..L {
@@ -325,7 +330,7 @@ mod tests {
             }
         }
 
-        let surface = compute_isosurface(&x);
+        let surface = compute_isosurface(&x, isosurface_value);
         let mid_column = (L - 2) / 2 - 1;
         for (i, (row, col)) in surface.into_iter().enumerate() {
             assert_eq!(row, i);

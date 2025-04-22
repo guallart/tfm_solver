@@ -14,11 +14,11 @@ def transform_file_name(file_name):
         return None
 
 
-directory = r"C:\Users\javgua\Desktop\TFM\outputs\rx_not_processed"
+directory = r"C:\Users\javgua\Desktop\TFM\outputs\isosurfaces"
 
 for file in os.listdir(directory):
-    new_name = transform_file_name(file)
-    # new_name = file.replace("isosurfaces_", "")
+    # new_name = transform_file_name(file)
+    new_name = file.replace("WeibullDist", "Weibull")
 
     if new_name:
         original_path = os.path.join(directory, file)

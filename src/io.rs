@@ -1,5 +1,5 @@
 use crate::config::{Precision, L, N_UNK};
-use crate::types::Distribution;
+use crate::dists::Distribution;
 use chrono::{Datelike, Timelike, Utc};
 use itertools::Itertools;
 use std::fs::{metadata, File, OpenOptions};

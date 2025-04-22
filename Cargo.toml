@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 approx = "0.5.1"
 chrono = "0.4.40"
+clap = { version = "4.5.35", features = ["derive"] }
 f256 = "0.6.0"
 itertools = "0.14.0"
 plotters = "0.3.7"

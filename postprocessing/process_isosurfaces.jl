@@ -42,16 +42,8 @@ function load_files(srcdir)
             continue
         end
         L = parse(Int64, m.captures[1])
-        dist = String(m.captures[2][1:end-4])
+        dist = String(m.captures[2])
         param = parse(Float64, m.captures[4])
-
-        if dist == "Exp" && param < 3
-            continue
-        end
-
-        if dist == "Weibull" && param > 1
-            continue
-        end
 
         surfaces_file = joinpath(srcdir, file)
         ℓ, h = compute_metrics(surfaces_file)
@@ -66,17 +58,18 @@ end
 
 get_keys(index, dist) = [key[index] for key in keys(ℓs) if key[1] == dist] |> Set |> collect |> sort
 
-Lx_exp(a) = (a * 0.5 / log(2) - 1)^(4 / 3)
+Lx_inv(a) = (a * 0.5 / log(2) - 1)^(4 / 3)
 Lx_wei(k) = ((1 - 0.5^(2^(-k))) / (-0.5 + 0.5^(2^(-k))))^(4 / 3)
 dopt = 1.22
 
 Lx = Dict(
-    "Exp" => Lx_exp,
+    "Inverse" => Lx_inv,
     "Weibull" => Lx_wei
 )
 
 pattern = r"^isosurfaces_L(\d+)_(\w+)\((\w)=([\d.]+)\).out$"
-srcdir = "C:/Users/javgua/Desktop/TFM/outputs/isosurfaces/"
+# srcdir = "C:/Users/javgua/Desktop/TFM/outputs/isosurfaces/"
+srcdir = "C:/Users/javgua/Desktop/TFM/solver/runner/isosurfaces/"
 
 ℓs, hs = load_files(srcdir)
 dists = Set([key[1] for key in keys(hs)])
@@ -134,7 +127,7 @@ annotate!(4.0, mean(yd) - 0.3, text("slope $(slope)", 10))
 xaxis!(:log10)
 yaxis!(:log10)
 xlabel!(L"L / L_{\times}")
-ylabel!(L"⟨ℓ⟩ /  / L_{\times}^{d_{opt}}")
+ylabel!(L"⟨ℓ⟩ / L_{\times}^{d_{opt}}")
 
 
 p2 = plot()
@@ -174,4 +167,4 @@ xlabel!(L"L / L_{\times}")
 ylabel!(L"⟨h⟩ / L_{\times}")
 
 plot(p1, p2, layout=(1, 2), size=(1000, 400), margin=[5mm 5mm])
-savefig("resultados_exp_weibull.pdf")
+# savefig("resultados.pdf")
